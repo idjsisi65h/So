@@ -15,22 +15,36 @@
 
 <div class="container">
     <h2>البث المباشر</h2>
-    <video id="video" controls autoplay muted></video>
+    <video id="video" controls autoplay muted playsinline></video>
 </div>
 
 <script>
   var video = document.getElementById('video');
   var videoSrc = '/hls/stream.m3u8';
 
-  if (Hls.isSupported()) {
-    var hls = new Hls({
-      maxBufferLength: 20,
-    });
-    hls.loadSource(videoSrc);
-    hls.attachMedia(video);
-  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-    video.src = videoSrc;
+  function loadStream() {
+    if (Hls.isSupported()) {
+      var hls = new Hls({
+        maxBufferLength: 60,           // تخزين مؤقت حتى 60 ثانية في جهاز المشاهد
+        maxMaxBufferLength: 120,       // السعة القصوى للبايتات المخزنة
+        maxBufferHole: 0.5,            // معالجة الثغرات البسيطة في البث تلقائياً
+        lowLatencyMode: false,         // إيقاف نمط التأخير المنخفض لضمان استقرار البث وعدم التقطيع
+        manifestLoadingTimeOut: 10000,
+        manifestLoadingMaxRetry: 10
+      });
+      hls.loadSource(videoSrc);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.ERROR, function (event, data) {
+        if (data.fatal) {
+          setTimeout(loadStream, 2000);
+        }
+      });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = videoSrc;
+    }
   }
+
+  loadStream();
 </script>
 
 </body>
