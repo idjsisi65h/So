@@ -7,7 +7,6 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// استلام رابط البث من متغيرات البيئة في Railway
 const STREAM_URL = process.env.STREAM_URL;
 
 app.use(cors());
@@ -26,8 +25,12 @@ function startFFmpeg() {
 
     console.log("جاري تشغيل وتحويل البث المباشر...");
     
+    // إضافة متصفح وهمي User-Agent مع إعدادات إعادة الاتصال والتجميع
     const ffmpeg = spawn('ffmpeg', [
-        '-re',
+        '-headers', 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\r\n',
+        '-reconnect', '1',
+        '-reconnect_streamed', '1',
+        '-reconnect_delay_max', '5',
         '-i', STREAM_URL,
         '-c', 'copy',
         '-f', 'hls',
