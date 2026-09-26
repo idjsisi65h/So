@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>البث المباشر</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        body { margin: 0; background-color: #0d1117; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
+        .container { width: 90%; max-width: 850px; text-align: center; }
+        video { width: 100%; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.6); background: #000; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>البث المباشر</h2>
+    <video id="video" controls autoplay muted></video>
+</div>
+
+<script>
+  var video = document.getElementById('video');
+  var videoSrc = '/hls/stream.m3u8';
+
+  if (Hls.isSupported()) {
+    var hls = new Hls({
+      maxBufferLength: 20,
+    });
+    hls.loadSource(videoSrc);
+    hls.attachMedia(video);
+  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    video.src = videoSrc;
+  }
+</script>
+
+</body>
+</html>
