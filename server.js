@@ -25,31 +25,33 @@ function startFFmpeg() {
 
     let formattedUrl = STREAM_URL.trim();
 
-    console.log("جاري تشغيل البث وتمديد فترة الاحتفاظ بالقطع...");
+    console.log("جاري التخزين بأقصى سرعة تسريع للشبكة...");
 
     const ffmpeg = spawn('ffmpeg', [
         '-y',
         '-user_agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         '-headers', 'Referer: https://shahid.mbc.net/\r\n',
+        // تسريع استقبال البيانات من الخادم المصدر
+        '-probesize', '1000000',
+        '-analyzeduration', '1000000',
         '-reconnect', '1',
         '-reconnect_streamed', '1',
-        '-reconnect_delay_max', '3',
+        '-reconnect_delay_max', '2',
         '-i', formattedUrl,
+        // نسخ دون إعادة ضغط ليكون التخزين أسرع من الوقت الحقيقي
         '-c:v', 'copy',
-        '-c:a', 'aac',
-        '-ar', '44100',
-        '-ac', '2',
+        '-c:a', 'copy',
         '-f', 'hls',
-        '-hls_time', '3',
-        '-hls_list_size', '30',        // الاحتفاظ بـ 30 قطعة سابقة (حوالي دقيقة ونصف كاملة في السيرفر)
-        '-hls_flags', 'delete_segments+omit_endlist',
+        '-hls_time', '2',
+        '-hls_list_size', '40',        // زيادة التخزين بالسيرفر إلى 40 قطعة (نحو 80 ثانية جاهزة فوراً)
+        '-hls_flags', 'delete_segments+omit_endlist+split_by_time',
         path.join(hlsFolder, 'stream.m3u8')
     ]);
 
     ffmpeg.stderr.on('data', (data) => {});
 
     ffmpeg.on('close', (code) => {
-        console.log(`إعادة تشغيل البث تلقائياً... (كود: ${code})`);
+        console.log(`إعادة جلب البث بأقصى سرعة... (كود: ${code})`);
         setTimeout(startFFmpeg, 1000);
     });
 }
