@@ -9,6 +9,7 @@
         body { margin: 0; background-color: #0d1117; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
         .container { width: 90%; max-width: 850px; text-align: center; }
         video { width: 100%; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.6); background: #000; }
+        #status { margin-top: 10px; color: #58a6ff; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -16,24 +17,36 @@
 <div class="container">
     <h2>البث المباشر</h2>
     <video id="video" controls autoplay muted playsinline></video>
+    <div id="status">جاري التخزين المؤقت المسبق للبث لضمان الاستقرار...</div>
 </div>
 
 <script>
   var video = document.getElementById('video');
+  var statusText = document.getElementById('status');
   var videoSrc = '/hls/stream.m3u8';
 
   function loadStream() {
     if (Hls.isSupported()) {
       var hls = new Hls({
-        maxBufferLength: 60,           // تخزين مؤقت حتى 60 ثانية في جهاز المشاهد
-        maxMaxBufferLength: 120,       // السعة القصوى للبايتات المخزنة
-        maxBufferHole: 0.5,            // معالجة الثغرات البسيطة في البث تلقائياً
-        lowLatencyMode: false,         // إيقاف نمط التأخير المنخفض لضمان استقرار البث وعدم التقطيع
-        manifestLoadingTimeOut: 10000,
+        maxBufferLength: 120,          // السماح بتخزين حتى دقيقتين مقدماً
+        maxMaxBufferLength: 300,
+        lowLatencyMode: false,         // إلغاء الوضع السريع للاعتماد الكامل على التخزين
+        manifestLoadingTimeOut: 15000,
         manifestLoadingMaxRetry: 10
       });
+
       hls.loadSource(videoSrc);
       hls.attachMedia(video);
+
+      // الانتظار حتى تكتمل كمية كافية من البوفر قبل البدء
+      hls.on(Hls.Events.FRAG_BUFFERED, function () {
+        var buffered = video.buffered;
+        if (buffered.length > 0) {
+          var bufferedSeconds = buffered.end(0) - buffered.start(0);
+          statusText.innerText = "التخزين المؤقت الحالي: " + Math.round(bufferedSeconds) + " ثانية (مستمر بالتحميل)";
+        }
+      });
+
       hls.on(Hls.Events.ERROR, function (event, data) {
         if (data.fatal) {
           setTimeout(loadStream, 2000);
