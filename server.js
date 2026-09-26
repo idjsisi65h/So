@@ -23,29 +23,34 @@ function startFFmpeg() {
         return;
     }
 
-    console.log("جاري تشغيل وتحويل البث وتجهيز التخزين المسبق...");
+    console.log("جاري تشغيل وتحويل البث وتجاوز الحماية...");
     
     const ffmpeg = spawn('ffmpeg', [
         '-y',
-        '-user_agent', 'VLC/3.0.18 LibVLC/3.0.18',
+        // انتحال متصفح حديث لتجاوز حظر MBC و edgenextcdn
+        '-user_agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        '-headers', 'Referer: https://shahid.mbc.net/\r\n',
         '-reconnect', '1',
         '-reconnect_streamed', '1',
-        '-reconnect_delay_max', '2',
-        '-rw_timeout', '20000000',
+        '-reconnect_delay_max', '3',
+        '-rw_timeout', '15000000',
         '-i', STREAM_URL,
+        // إعادة ترميز التوقيت بدون ضغط المعالج لضمان عدم توقف العداد
         '-c:v', 'copy',
-        '-c:a', 'copy',
+        '-c:a', 'aac',
+        '-ar', '44100',
+        '-ac', '2',
         '-f', 'hls',
-        '-hls_time', '3',
-        '-hls_list_size', '20',       // الاحتفاظ بقائمة من 20 قطعة فيديو سابقة في السيرفر
-        '-hls_flags', 'delete_segments+omit_endlist',
+        '-hls_time', '2',
+        '-hls_list_size', '15',
+        '-hls_flags', 'delete_segments+omit_endlist+split_by_time',
         path.join(hlsFolder, 'stream.m3u8')
     ]);
 
     ffmpeg.stderr.on('data', (data) => {});
 
     ffmpeg.on('close', (code) => {
-        console.log(`إعادة الاتصال الفوري بالبث... (Code: ${code})`);
+        console.log(`انقطع الاتصال، جاري إعادة التشغيل تلقائياً... (Code: ${code})`);
         setTimeout(startFFmpeg, 1000);
     });
 }
