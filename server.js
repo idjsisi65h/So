@@ -25,41 +25,32 @@ function startFFmpeg() {
 
     let formattedUrl = STREAM_URL.trim();
 
-    // إضافة .ts تلقائياً إن لم تكن موجودة
-    if (!formattedUrl.endsWith('.ts') && !formattedUrl.endsWith('.m3u8')) {
-        formattedUrl = formattedUrl + '.ts';
-    }
-
-    console.log("جاري قراءة وتحويل بث الـ TS المباشر...");
+    console.log("جاري تشغيل البث وتمديد فترة الاحتفاظ بالقطع...");
 
     const ffmpeg = spawn('ffmpeg', [
         '-y',
-        '-loglevel', 'warning',
-        // انتحال مشغل IPTV لمنع الحظر
-        '-user_agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) VLC/3.0.18',
-        '-headers', 'Connection: keep-alive\r\n',
+        '-user_agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        '-headers', 'Referer: https://shahid.mbc.net/\r\n',
         '-reconnect', '1',
         '-reconnect_streamed', '1',
         '-reconnect_delay_max', '3',
         '-i', formattedUrl,
-        // معالجة الفيديو والصوت لضمان التوافق مع المتصفح
-        '-c:v', 'copy',          // نسخ الفيديو بدون إجهاد المعالج
-        '-c:a', 'aac',           // تحويل الصوت لـ AAC المضمون في جميع المتصفحات
-        '-b:a', '128k',
+        '-c:v', 'copy',
+        '-c:a', 'aac',
+        '-ar', '44100',
+        '-ac', '2',
         '-f', 'hls',
-        '-hls_time', '2',
-        '-hls_list_size', '12',
+        '-hls_time', '3',
+        '-hls_list_size', '30',        // الاحتفاظ بـ 30 قطعة سابقة (حوالي دقيقة ونصف كاملة في السيرفر)
         '-hls_flags', 'delete_segments+omit_endlist',
         path.join(hlsFolder, 'stream.m3u8')
     ]);
 
-    ffmpeg.stderr.on('data', (data) => {
-        console.log(`FFmpeg TS Log: ${data.toString()}`);
-    });
+    ffmpeg.stderr.on('data', (data) => {});
 
     ffmpeg.on('close', (code) => {
-        console.log(`انقطع اتصال الـ TS، إعادة الاتصال تلقائياً... (كود: ${code})`);
-        setTimeout(startFFmpeg, 2000);
+        console.log(`إعادة تشغيل البث تلقائياً... (كود: ${code})`);
+        setTimeout(startFFmpeg, 1000);
     });
 }
 
