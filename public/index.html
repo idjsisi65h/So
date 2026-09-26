@@ -9,7 +9,7 @@
         body { margin: 0; background-color: #0d1117; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
         .container { width: 90%; max-width: 850px; text-align: center; }
         video { width: 100%; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.6); background: #000; }
-        #status { margin-top: 10px; color: #58a6ff; font-size: 14px; }
+        #status { margin-top: 12px; color: #58a6ff; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -17,7 +17,7 @@
 <div class="container">
     <h2>البث المباشر</h2>
     <video id="video" controls autoplay muted playsinline></video>
-    <div id="status">جاري التخزين المؤقت المسبق للبث لضمان الاستقرار...</div>
+    <div id="status">جاري ضبط التخزين المستمر...</div>
 </div>
 
 <script>
@@ -28,22 +28,26 @@
   function loadStream() {
     if (Hls.isSupported()) {
       var hls = new Hls({
-        maxBufferLength: 120,          // السماح بتخزين حتى دقيقتين مقدماً
+        maxBufferLength: 120,            // تخزين دقيقتين مقدماً
         maxMaxBufferLength: 300,
-        lowLatencyMode: false,         // إلغاء الوضع السريع للاعتماد الكامل على التخزين
-        manifestLoadingTimeOut: 15000,
-        manifestLoadingMaxRetry: 10
+        liveSyncDurationCount: 10,       // الحفاظ على مسافة أمان كبيرة مع البث المباشر
+        liveMaxLatencyDurationCount: 30, // منع القفز الإجباري لنهاية البث
+        liveDurationInfinity: true,      // معاملة البث المباشر كفيديو متصل لمنع التخطي
+        highBufferWatchdogPeriod: 3,
+        lowLatencyMode: false
       });
 
       hls.loadSource(videoSrc);
       hls.attachMedia(video);
 
-      // الانتظار حتى تكتمل كمية كافية من البوفر قبل البدء
+      // تحديث شريط التخزين المتبقي دون قفز
       hls.on(Hls.Events.FRAG_BUFFERED, function () {
         var buffered = video.buffered;
         if (buffered.length > 0) {
-          var bufferedSeconds = buffered.end(0) - buffered.start(0);
-          statusText.innerText = "التخزين المؤقت الحالي: " + Math.round(bufferedSeconds) + " ثانية (مستمر بالتحميل)";
+          var bufferedSeconds = buffered.end(0) - video.currentTime;
+          if (bufferedSeconds > 0) {
+            statusText.innerText = "المخزّن المتبقي أمامك: " + Math.round(bufferedSeconds) + " ثانية (بدون قفز)";
+          }
         }
       });
 
