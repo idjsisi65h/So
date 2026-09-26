@@ -24,33 +24,41 @@ function startFFmpeg() {
     }
 
     let formattedUrl = STREAM_URL.trim();
-    if (!formattedUrl.endsWith('.m3u8') && !formattedUrl.endsWith('.ts')) {
+
+    // إضافة .ts تلقائياً إن لم تكن موجودة
+    if (!formattedUrl.endsWith('.ts') && !formattedUrl.endsWith('.m3u8')) {
         formattedUrl = formattedUrl + '.ts';
     }
 
-    console.log("جاري البدء في تحويل وسحب البث المباشر...");
+    console.log("جاري قراءة وتحويل بث الـ TS المباشر...");
 
     const ffmpeg = spawn('ffmpeg', [
         '-y',
         '-loglevel', 'warning',
-        '-user_agent', 'VLC/3.0.18 LibVLC/3.0.18',
-        '-probesize', '32768',          // تقليل حجم الفحص لبدء إنشاء الملف فوراً
-        '-analyzeduration', '0',        // إلغاء تحليل البث المطوّل لسرعة الاستجابة
+        // انتحال مشغل IPTV لمنع الحظر
+        '-user_agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) VLC/3.0.18',
+        '-headers', 'Connection: keep-alive\r\n',
+        '-reconnect', '1',
+        '-reconnect_streamed', '1',
+        '-reconnect_delay_max', '3',
         '-i', formattedUrl,
-        '-c', 'copy',                  // نسخ المجرى مباشرة بدون معالجة ثقيلة
+        // معالجة الفيديو والصوت لضمان التوافق مع المتصفح
+        '-c:v', 'copy',          // نسخ الفيديو بدون إجهاد المعالج
+        '-c:a', 'aac',           // تحويل الصوت لـ AAC المضمون في جميع المتصفحات
+        '-b:a', '128k',
         '-f', 'hls',
         '-hls_time', '2',
-        '-hls_list_size', '10',
+        '-hls_list_size', '12',
         '-hls_flags', 'delete_segments+omit_endlist',
         path.join(hlsFolder, 'stream.m3u8')
     ]);
 
     ffmpeg.stderr.on('data', (data) => {
-        console.log(`FFmpeg Log: ${data.toString()}`);
+        console.log(`FFmpeg TS Log: ${data.toString()}`);
     });
 
     ffmpeg.on('close', (code) => {
-        console.log(`انقطع الاتصال بالبث، إعادة المحاولة... (Code: ${code})`);
+        console.log(`انقطع اتصال الـ TS، إعادة الاتصال تلقائياً... (كود: ${code})`);
         setTimeout(startFFmpeg, 2000);
     });
 }
