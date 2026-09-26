@@ -23,40 +23,34 @@ function startFFmpeg() {
         return;
     }
 
-    // إذا كان الرابط رابط IPTV مباشر ولا ينتهي بـ .m3u8 أو .ts يتم تحويله للصيغة المتوافقة
     let formattedUrl = STREAM_URL.trim();
     if (!formattedUrl.endsWith('.m3u8') && !formattedUrl.endsWith('.ts')) {
         formattedUrl = formattedUrl + '.ts';
     }
 
-    console.log("جاري تشغيل وسحب رابط IPTV...");
-    
+    console.log("جاري البدء في تحويل وسحب البث المباشر...");
+
     const ffmpeg = spawn('ffmpeg', [
         '-y',
-        // محاكاة مشغل IPTV احترافي (IPTVSmarters/VLC)
-        '-user_agent', 'IPTVSmartersPro/3.1.5 (Linux;Android 11) Mobile',
-        '-reconnect', '1',
-        '-reconnect_streamed', '1',
-        '-reconnect_delay_max', '5',
-        '-timeout', '15000000',
-        '-rw_timeout', '15000000',
+        '-loglevel', 'warning',
+        '-user_agent', 'VLC/3.0.18 LibVLC/3.0.18',
+        '-probesize', '32768',          // تقليل حجم الفحص لبدء إنشاء الملف فوراً
+        '-analyzeduration', '0',        // إلغاء تحليل البث المطوّل لسرعة الاستجابة
         '-i', formattedUrl,
-        // إعادة معالجة الصوت والفيديو للتوافق التام مع متصفحات الموبايل
-        '-c:v', 'copy',
-        '-c:a', 'aac',
-        '-ar', '44100',
-        '-ac', '2',
+        '-c', 'copy',                  // نسخ المجرى مباشرة بدون معالجة ثقيلة
         '-f', 'hls',
-        '-hls_time', '3',
-        '-hls_list_size', '15',
+        '-hls_time', '2',
+        '-hls_list_size', '10',
         '-hls_flags', 'delete_segments+omit_endlist',
         path.join(hlsFolder, 'stream.m3u8')
     ]);
 
-    ffmpeg.stderr.on('data', (data) => {});
+    ffmpeg.stderr.on('data', (data) => {
+        console.log(`FFmpeg Log: ${data.toString()}`);
+    });
 
     ffmpeg.on('close', (code) => {
-        console.log(`انقطع الاتصال بسيرفر IPTV، جاري إعادة المحاولة... (Code: ${code})`);
+        console.log(`انقطع الاتصال بالبث، إعادة المحاولة... (Code: ${code})`);
         setTimeout(startFFmpeg, 2000);
     });
 }
